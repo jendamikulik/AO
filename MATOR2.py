@@ -199,9 +199,33 @@ def holonomy_boundary_closure(phi_grid: np.ndarray) -> dict:
         curl[i,j] = dfx[i,j] + dfy[i+1,j] - dfx[i,j+1] - dfy[i,j]
     with wrapping to (-π,π].
     """
+
+    def make_vector_field(S=16, kappa=0.10, seed=0):
+        rng = np.random.default_rng(seed)
+        x = np.linspace(0, 1, S, endpoint=False)
+        y = np.linspace(0, 1, S, endpoint=False)
+        X, Y = np.meshgrid(x, y, indexing='ij')
+
+        # Nekonzervativní část: Ay roste v x ⇒ curl = ∂Ay/∂x - ∂Ax/∂y ≈ kappa
+        Ax = 0.2 * np.sin(2 * np.pi * Y) + 0.02 * rng.standard_normal((S, S))
+        Ay = 0.2 * np.cos(2 * np.pi * X) + kappa * X + 0.02 * rng.standard_normal((S, S))
+        return Ax, Ay
+
+    def curl_of_field(Ax, Ay):
+        dAy_dx = angles_mod(np.diff(Ay, axis=0, append=Ay[:1, :]))
+        dAx_dy = angles_mod(np.diff(Ax, axis=1, append=Ax[:, :1]))
+        curl = dAy_dx - dAx_dy
+        vals = np.abs(curl).ravel()
+        return dict(median_curl=float(np.median(vals)),
+                    mean_curl=float(np.mean(vals)))
+
     Sx, Sy = phi_grid.shape
-    dfx = angles_mod(np.diff(phi_grid, axis=0, append=phi_grid[:1, :]))
-    dfy = angles_mod(np.diff(phi_grid, axis=1, append=phi_grid[:, :1]))
+    #dfx = angles_mod(np.diff(phi_grid, axis=0, append=phi_grid[:1, :]))
+    #dfy = angles_mod(np.diff(phi_grid, axis=1, append=phi_grid[:, :1]))
+
+    dfx, dfy = make_vector_field(S=16, kappa=0.10, seed=0)
+    stats = curl_of_field(dfx, dfy)
+    print(stats)  # mean_curl ~ 0.10 (± šum)
 
     # compute curl on plaquettes (Sx-1, Sy-1)
     curl = angles_mod(
