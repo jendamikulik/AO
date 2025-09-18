@@ -1,0 +1,291 @@
+jasně — tady máš přesně ty čtyři kusy, plně dopsané a připravené k „copy-paste“. Neřeším nic okolo, jen drop-in náhrady funkcí.
+
+```python
+import math
+import numpy as np
+
+# ---------------------------------------------------------
+# 1) stride_near(T, frac): robustní výběr kroku
+# ---------------------------------------------------------
+def _gcd(a, b):
+    while b:
+        a, b = b, a % b
+    return abs(a)
+
+def _coprime(a, b):
+    return _gcd(a, b) == 1
+
+def stride_near(T: int, frac: float, forbid=(1, 2), search_radius=None):
+    """
+    Najdi krok s (1 < s < T-1), který je:
+      • co nejblíž target = round(frac*T) (mod T),
+      • koprimární s T,
+      • nepatří mezi triviální (1,2,T-1,T-2),
+      • má nízké aliasingové riziko (měkká penalizace násobků T/d).
+
+    Fallback: nejmenší s>2 coprime s T.
+    """
+    if T <= 4:
+        return max(1, T - 2)
+
+    target = int(round((frac % 1.0) * T)) % T
+    if target < 2:
+        target = 2
+    if target > T - 2:
+        target = T - 2
+
+    R = search_radius or max(8, int(0.15 * T))
+
+    def score(s: int) -> float:
+        triv = {1, 2, T - 1, T - 2}
+        pen = 3.0 if s in triv or s in forbid else 0.0
+        # měkká penalizace aliasingu: pokud s leží blízko násobků T/d
+        alias = 0.0
+        for d in range(2, min(32, T // 2) + 1):
+            if T % d == 0:
+                step = T // d
+                k = round(s / step)
+                alias += 0.5 / d * (1.0 / (1.0 + abs(s - k * step)))
+        return abs(s - target) + pen + alias
+
+    best = None
+    for delta in range(0, R + 1):
+        for cand in (target + delta, target - delta):
+            s = cand % T
+            if s < 2 or s > T - 2:
+                continue
+            if not _coprime(s, T):
+                continue
+            sc = score(s)
+            if best is None or sc < best[0]:
+                best = (sc, s)
+        if best is not None and delta > 12:
+            break
+
+    if best is not None:
+        return best[1]
+
+    # fallback
+    for s in range(3, T - 1):
+        if _coprime(s, T):
+            return s
+    return max(1, T - 2)
+```
+
+```python
+# ---------------------------------------------------------
+# 2) truncated_hadamard(m, idx): plná logika (Walsh–Hadamard)
+# ---------------------------------------------------------
+def truncated_hadamard(m: int, idx: int = 0) -> np.ndarray:
+    """
+    Vrať vektor délky m s ±1 podle řádku Walsh–Hadamardovy matice (Sylvester).
+    • Neallocuje celou H_N; generuje řádek „na přání“: H[r, c] = (-1)^{popcount(r & c)}.
+    • N = 2^k >= m; vezme r = idx mod N.
+    • Pokud m < N, bezpečně ořízne (bez náhodného šumu).
+    """
+    if m <= 1:
+        return np.array([1], dtype=np.int8)
+
+    # N = 2^k >= m
+    N = 1
+    while N < m:
+        N <<= 1
+
+    r = int(idx) % N
+
+    # vektor indexů sloupců 0..m-1
+    c = np.arange(m, dtype=np.uint64)
+    rc = (np.uint64(r) & c).astype(np.uint64)
+
+    # vektorový popcount (Hacker's Delight)
+    v = rc.copy()
+    v = v - ((v >> 1) & np.uint64(0x5555555555555555))
+    v = (v & np.uint64(0x3333333333333333)) + ((v >> 2) & np.uint64(0x3333333333333333))
+    v = (v + (v >> 4)) & np.uint64(0x0F0F0F0F0F0F0F0F)
+    v = v + (v >> 8)
+    v = v + (v >> 16)
+    v = v + (v >> 32)
+    bc = (v & np.uint64(0x7F)).astype(np.uint8)
+
+    row = np.where((bc & 1) == 0, 1, -1).astype(np.int8)
+    return row
+```
+
+```python
+# ---------------------------------------------------------
+# 3) schedule_instance_double(..., two_pass=True/False)
+#    – podrobná two-pass varianta
+# ---------------------------------------------------------
+def _ensure_distinct_coprime_strides(T, sC, sV):
+    if not _coprime(sC, T):
+        sC = stride_near(T, sC / T + 1e-9)
+    if not _coprime(sV, T):
+        sV = stride_near(T, sV / T + 2e-9)
+    if sC == sV:
+        sV = stride_near(T, (sV + 1) / T)
+    if not _coprime(sC, sV):  # nepovinné, ale pomáhá
+        sV = stride_near(T, (sV + 3) / T)
+    return sC, sV
+
+def schedule_instance_double(
+    n, clauses, *,
+    cR=12.0, rho=0.6, zeta0=0.4, L=3, seed=42,
+    sC_frac=0.47, sV_frac=0.31, two_pass=False
+):
+    """
+    Lock-only rozvrh s dvojicí koprimárních stride (časový sC pro klauzule, posun sV pro proměnné).
+    Two-pass:
+      PASS 1) z hrubých hlasů (vote) odhadni per-sloupec majoritu (+1/−1).
+      PASS 2) vyber top-m časů ve sloupci konzistentně s majoritou a nastav fáze {0,π}.
+    Vrací: phi (T×C, fáze 0/π), mask (T×C, {0,1}), T, m.
+    """
+    rng = np.random.default_rng(seed)
+    C = max(1, n)
+    R = max(1, int(math.ceil(cR * math.log(max(2, C)))))
+    T = int(L * R)
+    m = max(1, int(math.floor(rho * T)))
+
+    sC = stride_near(T, sC_frac)
+    sV = stride_near(T, sV_frac)
+    sC, sV = _ensure_distinct_coprime_strides(T, sC, sV)
+
+    vote = np.zeros((T, C), dtype=np.int32)
+
+    for i, clause in enumerate(clauses):
+        off = (i * sC) % T
+        base = truncated_hadamard(m, idx=(i * 131 + 7)).astype(int)
+
+        # fixní poměr -1:+1 podle zeta0
+        k_neg = int(math.floor(zeta0 * m))
+        signs = base.copy()
+        neg = np.where(signs < 0)[0].tolist()
+        pos = np.where(signs > 0)[0].tolist()
+        rng.shuffle(neg); rng.shuffle(pos)
+        need = k_neg - len(neg)
+        if need > 0:
+            for p in pos[:need]:
+                signs[p] = -1
+        elif need < 0:
+            for p in neg[:(-need)]:
+                signs[p] = +1
+
+        for t in range(m):
+            tt = (off + t) % T
+            sgn = 1 if signs[t] > 0 else -1
+            for lit in clause:
+                j = abs(lit) - 1
+                if j >= C:
+                    continue
+                vshift = (j * sV) % T
+                ttv = (tt + vshift) % T
+                vote[ttv, j] += sgn
+
+    # Single-pass -> top |vote| a polarita ze součtu vybraných
+    if not two_pass:
+        phi  = np.zeros((T, C), dtype=np.float64)
+        mask = np.zeros((T, C), dtype=np.float64)
+        for j in range(C):
+            col = vote[:, j]
+            if np.all(col == 0):
+                continue
+            idxs = np.argsort(-np.abs(col))[:m]
+            pol = 1 if np.sum(col[idxs]) >= 0 else -1
+            for tt in idxs:
+                bit = pol * np.sign(col[tt])
+                phi[tt, j]  = 0.0 if bit >= 0 else np.pi
+                mask[tt, j] = 1.0
+        return phi, mask, T, m
+
+    # Two-pass:
+    # PASS 1 – „majorita“ sloupce přes znamení hlasů (ne přes absolutní hodnoty)
+    major = np.ones(C, dtype=np.int8)
+    for j in range(C):
+        col = vote[:, j]
+        if np.all(col == 0):
+            continue
+        sgn_sum = np.sum(np.sign(col))
+        major[j] = 1 if sgn_sum >= 0 else -1
+
+    # PASS 2 – preferenční skóre: timesloty se „správným“ znaménkem dostanou bonus
+    phi  = np.zeros((T, C), dtype=np.float64)
+    mask = np.zeros((T, C), dtype=np.float64)
+    for j in range(C):
+        col = vote[:, j]
+        if np.all(col == 0):
+            continue
+        prefer = np.where(np.sign(col) * major[j] >= 0, 1.0, 0.5)  # half-penalty proti majoritě
+        score = prefer * np.abs(col)
+        idxs = np.argsort(-score)[:m]
+        for tt in idxs:
+            bit = major[j] * np.sign(col[tt])
+            phi[tt, j]  = 0.0 if bit >= 0 else np.pi
+            mask[tt, j] = 1.0
+
+    return phi, mask, T, m
+```
+
+```python
+# ---------------------------------------------------------
+# 4) feedback_align(...): víc iterací + noise handling
+# ---------------------------------------------------------
+def feedback_align(
+    phi, mask, *,
+    rounds=8,
+    gate_start=0.15, gate_end=0.85,
+    jitter=1e-6,
+    energy_floor=1e-4
+):
+    """
+    Vícekrokové fázové zarovnání (annealing):
+      • v kole r použij práh τ_r = linspace(gate_start → gate_end)
+      • flip pouze, když cos(φ-φ̄) < −τ_r (silně proti směru)
+      • tie-breaker jitter pro |cos| ~ 0 (vyhneš se oscilacím)
+      • noise-gating: sloupce s nízkou „energií“ (málo masky) neflipuj
+    """
+    T, C = phi.shape
+    phi = phi.copy()
+    mask = mask.copy()
+
+    # energie sloupce = kolik validních vzorků/sloupec
+    col_energy = np.maximum(1e-12, mask.sum(axis=0) / float(T))
+
+    for r in range(int(rounds)):
+        tau = gate_start + (gate_end - gate_start) * (r / max(1, rounds - 1))
+        for j in range(C):
+            idxs = np.where(mask[:, j] > 0)[0]
+            if idxs.size == 0:
+                continue
+            if col_energy[j] < energy_floor:
+                # příliš málo dat → nerať se flipovat (šum)
+                continue
+
+            v = np.exp(1j * phi[idxs, j])
+            mean = np.mean(v)
+            if np.abs(mean) < 1e-12:
+                continue
+
+            ang = np.angle(mean)
+            cosd = np.cos(phi[idxs, j] - ang)
+
+            # tie-break: pokud |cos| ~ 0, přidej minijitter (deterministicky seřazený)
+            near0 = np.where(np.abs(cosd) < 1e-9)[0]
+            if near0.size:
+                # lehce rozhodnout sporné případy → zabraňuje „zaseknutí“
+                phi[idxs[near0], j] += (np.arange(near0.size) + 1) * jitter
+
+            flips = np.where(cosd < -tau)[0]
+            if flips.size:
+                phi[idxs[flips], j] = (phi[idxs[flips], j] + np.pi) % (2 * np.pi)
+
+    return phi, mask
+```
+
+---
+
+### Poznámky k integraci
+
+* `stride_near` a `truncated_hadamard` můžeš rovnou nahradit v tvém projektu; mají nulové závislosti (jen `numpy`).
+* `schedule_instance_double` teď umí jak single-pass, tak **two-pass** přes `two_pass=True`.
+* `feedback_align` má víc iterací (default 8) a tři ochrany proti šumu/aliasingu: **annealing gate**, **jitter** a **noise-gating**.
+
+Kdybys chtěl drobně jiné defaulty (třeba `rounds=6`, jiné prahy), napiš — upravím parametry přímo v signatuře.
