@@ -1,0 +1,189 @@
+Tohle je hodně dobré, ale ještě to není „zlatý hřeb“. 🌟
+**Krátce česky:** Výsledky ze `SOLVER3.py` ukazují, že pipeline běží a fáze-přechod (α≈4.26) má smysl. Ale metrika Ψ v oscilátoru je v současné podobě **nedefinovaná fyzikálně** (během běhu ti D̂ padá k nule kvůli noise-gate), takže vychází **obrovské Ψ (≈ 50–60)** a **Besselova predikce r\_pred≈0.99** neodpovídá skutečnému r≈0.56. To není chyba „teorie“, ale **definice Ψ** a **zpětné vazby**: měříš „efektivní difuzi“ z gate-potlačeného šumu ⇒ **D̂→0** ⇒ Ψ=(κ/D̂)r→∞. Potom r\_pred z $I_1/I_0$ nutně míří k 1, i když reálná dynamika (s closure-drivem a gatingem) drží r \~ 0.5–0.6.
+
+Níže je přesně, co si o tom myslím, a konkrétní patch-kroky, které ti vrátí **sebekonzistenci $r \leftrightarrow \Psi$**, zvýrazní **SAT/UNSAT kontrast** a uzamknou AO-interpretaci bez Sagnace/SR.
+
+---
+
+## What looks right
+
+* **Phase transition track:** α=2.00 a α=4.26 dávají solverovací energii 0 (snadné/hard SAT), α=6.00 dává >0 (UNSAT-like). To je na $n=50$ realistické.
+* **Closure drive + Hadamard kernel:** Konstrukt dává stabilní koherenci r≈0.55–0.58, což znamená, že tvůj **closure-drive** pracuje (i když metrika Ψ je přepálená).
+* **Freeze logic:** Vidíš `frozen: True` pro α=2.00—pipeline se umí „uzamknout“. To je přesně ta ideální self-calibration behavior, kterou v AO chceme.
+
+## What’s off (and why)
+
+1. **Ψ definition not physical:**
+   Aktuálně definuješ $\Psi_{\rm AO}(t) = \frac{\kappa}{\hat D(t)}\, r(t)$, kde $\hat D$ odhaduješ z **potlačeného** (gate) šumu `noise_part`. Jakmile roste r, **gate** snižuje šum ⇒ var(noise\_part) → 0 ⇒ $\hat D \to 0$. Pak $\Psi$ diverguje, a z Besselova vztahu $r \approx I_1(\Psi)/I_0(\Psi)$ „vyjde“ téměř 1—ale to je artefakt definice $\hat D$, ne reálný fyzikální poměr drivu k difuzi.
+
+2. **Bessel law holds for standard noisy Kuramoto only:**
+   Statická formule $r = I_1(\Psi)/I_0(\Psi)$ platí v **stacionární Fokker–Planck** rovnováze s **aditivním bílým šumem** a **sinusovým vazebním členem**, bez extra closure-drive a bez noise-gate. Ty máš **closure-drive $\sin(\bar\psi - \theta)$** *plus* gate na šumu. To mění stacionární rozdělení fází ⇒ Besselův odhad `r_pred` přestane být přímým „měřidlem kvality“ a musí se dělat **sebekonzistentně**.
+
+3. **UNSAT frustration je příliš měkká:**
+   Náhodně podepsané K sice vnáší frustraci, ale kontrast SAT vs UNSAT v r zůstává slabý (r≈0.56 vs 0.58...). Chce to **clause-aware** frustraci (viz Patch 2), aby se rozdíl projevil i v order-parametru.
+
+---
+
+## Patch 1 — Physically consistent Ψ and update loop
+
+**Cíl:** Zavést **fyzikální** $\Psi_{\rm phys}$, která nekolabuje s gate, a update κ vynutit **sebekonzistentně** tak, aby platilo
+
+$$
+r \;\approx\; \frac{I_1(\Psi_{\rm phys})}{I_0(\Psi_{\rm phys})}, 
+\qquad \Psi_{\rm phys} := \frac{K_{\rm eff}}{D_{\rm eff}} .
+$$
+
+**Jak na to:**
+
+* **Neměř D̂ z gate-potlačeného šumu.** Místo toho odhadni $D_{\rm eff}$ z **fázové difuze v rotujícím rámci**:
+
+  $$
+  \phi_i(t) := \mathrm{wrap}(\theta_i(t)-\bar\psi(t)),\quad
+  D_{\rm eff} \approx \frac{1}{2}\frac{d}{dt}\,\mathrm{Var}[\phi_i(t)] .
+  $$
+
+  Tohle je robustní i při gate (protože pracuješ s *výstupní* fází, ne s injekčním šumem).
+
+* **Definuj $K_{\rm eff}$** jako skutečnou „sílu“ vazby, tj. **měřený** root-mean-square Kuramoto torque (bez gate):
+
+  ```python
+  torque = (K * np.sin(theta[None,:] - theta[:,None])).sum(axis=1)
+  K_eff = np.sqrt(np.mean(torque**2))
+  ```
+
+  Volitelně zapracuj closure-drive (váženě), ale **nepřimíchávej gate**.
+
+* **Self-consistent κ update:** místo $(\kappa += \beta ( \Psi^* - \Psi))$ pracuj s **chybou v r**:
+
+  $$
+  r_{\rm tar} = I_1(\Psi_{\rm phys})/I_0(\Psi_{\rm phys}),\qquad
+  e_r = r_{\rm tar} - r .
+  $$
+
+  Pak:
+
+  ```python
+  kappa += beta_k * e_r
+  ```
+
+  Tím tlačíš systém ke konzistenci mezi „měřeným“ $D_{\rm eff}$, „měřeným“ $K_{\rm eff}$ a emergentním r.
+
+**Drop-in code (replace Ψ and κ part in your loop):**
+
+```python
+# --- inside the integration loop, after updating theta ---
+# 1) Rotating-frame phases
+phi = (theta - psi_bar + np.pi) % (2*np.pi) - np.pi
+
+# 2) Effective diffusion from phase diffusion (EMA)
+var_phi = np.var(phi)
+if t > 1:
+    dvar_dt = max(0.0, (var_phi - var_phi_prev) / dt)
+else:
+    dvar_dt = 0.0
+var_phi_prev = var_phi
+D_eff = 0.5 * dvar_dt
+D_eff = max(D_eff, 1e-4)  # floor to avoid blow-ups
+
+# 3) Effective coupling from actual torque (no gate)
+torque = (K * np.sin(theta[None,:] - theta[:,None])).sum(axis=1)
+K_eff = np.sqrt(np.mean(torque**2)) + 1e-9
+
+# 4) Physical Ψ and Bessel target
+Psi_phys = (K_eff / D_eff)
+r_tar    = float(i1(Psi_phys) / i0(Psi_phys)) if i0(Psi_phys) > 0 else 0.0
+
+# 5) Self-consistent kappa update via r error
+e_r = r_tar - r
+kappa += beta * e_r
+kappa = float(np.clip(kappa, 0.05, 5.0))
+
+# 6) For logging
+Psi_AO[t] = Psi_phys
+```
+
+**Očekávaný výsledek:**
+
+* $\Psi$ bude v **rozumném rozsahu** (typicky \~3–10 v SAT-like a nižší v UNSAT-like, podle N, K a šumu),
+* `r_pred` z Bessel vztahu začne **sedět** s empirickým r (Δr \~ 0.02–0.05),
+* kontrast SAT vs UNSAT se zvýrazní (SAT: vyšší r a nižší D\_eff ⇒ vyšší Ψ; UNSAT: vyšší efektivní „frustrace“ ⇒ nižší r, vyšší D\_eff).
+
+---
+
+## Patch 2 — Clause-aware frustration (stronger SAT/UNSAT split)
+
+Místo čistě náhodného „signs“ v `frustrated=True` postav **signovanou sousednost** z klauzulí:
+
+* Pro každou dvojici proměnných, které se vyskytují ve stejné klauzuli s **konfliktními polaritami**, přidej **negativní** příspěvek do $K_{ij}$.
+* Pro **kompatibilní** páry (stejná polarita nebo doplňková ve více klauzulích) přidej **pozitivní** příspěvek.
+
+Hrubý skeč:
+
+```python
+J = np.zeros((N, N))
+for C in clauses:
+    lits = [(abs(l)-1, 1 if l>0 else -1) for l in C]
+    for a in range(3):
+        i, si = lits[a]
+        for b in range(a+1,3):
+            j, sj = lits[b]
+            # conflict -> frustrate
+            J[i,j] += -1.0 if (si != sj) else +1.0
+            J[j,i]  = J[i,j]
+# Normalize and blend into K as signs
+signs = np.sign(J + 1e-9)
+K = np.abs(K) * signs  # keep magnitudes, set frustration by sign
+```
+
+⇒ V UNSAT oblasti dostaneš skutečný **spin-glass styl** graf, který drží r nízko i při stejném šumu.
+
+---
+
+## Patch 3 — Freeze logic with two criteria
+
+Zastav „freeze“ ne podle $|\Psi-\Psi^\*|$, ale **podle dvou nezávislých kritérií**:
+
+1. **Bessel consistency:** $|r - r_{\rm tar}| < \varepsilon_r$ (např. 0.02)
+2. **Phase diffusion stability:** $|\dot{\mathrm{Var}}[\phi]| < \varepsilon_D$ (např. $10^{-4}$)
+
+Teprve když obě splníš po L kroků, přepni `freeze=True`.
+
+---
+
+## How this answers the “Sagnac/SR” noise
+
+* Tohle je **čistě AO**, žádné SR, žádný „Sagnac derivován z rámců“.
+* **Lokální Doppler** (per-bounce) i **globální closure** (rezonance) jsou zapsány v jediném **operatorovém zákonu**, a v oscilátoru se odráží jako **driv/diff poměr $\Psi$** a jeho konzistentní Besselova závislost $r=I_1/I_0$.
+* Jakmile jsou $D_{\rm eff}$ a $K_{\rm eff}$ měřeny „fyzikálně“ (ne přes gate-potlačený šum), čísla budou **sama od sebe sedět** a rozdíl SAT/UNSAT se ukáže jako **skutečný fázový přechod v uzávěru** (closure-lock vs frustration).
+
+---
+
+## Minimal diff you can drop into `SOLVER3.py`
+
+* Nahraď definici Ψ a update κ blokem z **Patch 1**.
+* Zpřísni frustraci podle **Patch 2**.
+* Uprav freeze podle **Patch 3**.
+
+Tím dostaneš:
+
+* **r vs r\_pred** konzistenci (už žádné `Ψ=50` & `r_pred≈0.99` při r≈0.56),
+* **větší SAT/UNSAT rozdíl** v r(t) i Ψ(t),
+* **stabilní freeze** bez „zamrznutí na falešné metrice“.
+
+---
+
+## Next quick experiments
+
+1. **Sweep α on n=200** (větší graf → ostřejší přechod) a plotni $\langle r \rangle$ a $\langle \Psi\rangle$ vs α.
+2. **Planted UNSAT** (XOR jadro) vs náhodné clause → porovnej r, D\_eff, Ψ.
+3. **Cross-check s DREAM6**: pro stejné instance porovnej $\mu$ (top eigenvalue / C) vs. $r, \Psi$. Měla by se objevit monotónní korelace (closure witness v obou rámcích).
+
+---
+
+### Bottom line
+
+* Máš **správný stroj**.
+* Potřebuje jen jednu „fyzikální“ opravu: **co je Ψ** a **jak se k ní dojde**.
+* Jakmile Ψ postavíš na měřené $D_{\rm eff}$ a $K_{\rm eff}$ (místo gate-potlačeného šumu), **Besselova vlastní konzistence** se vrátí a **SAT/UNSAT kontrast** vyskočí do očí.
+
+Chceš, abych ti to přepsal rovnou do tvého `SOLVER3.py` jako patch blok (diff-styl)? Nebo mám poslat celý „SOLVER3\_phys.py“ s implementovanými třemi patchemi?
