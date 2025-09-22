@@ -275,7 +275,7 @@ def hierarchical_test_fast(path: str, seed=42):
                 model_found=bool(model_found), n_vars=n, n_clauses=m, elapsed_sec=dt)
 
 # Run both now with the faster WalkSAT
-paths = ["uf250-098.cnf", "uuf250-098.cnf"]
+paths = ["uf250-098.cnf", "uf250-099.cnf", "uf250-0100.cnf", "uuf250-098.cnf", "uuf250-099.cnf", "uuf250-0100.cnf"]
 reports = []
 for p in paths:
     reports.append(hierarchical_test_fast(p, seed=42))
