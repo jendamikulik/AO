@@ -1,0 +1,64 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.sparse import lil_matrix, csr_matrix
+
+# 3-SAT instance (satisfiable)
+clauses = [[1, -2, 3], [-1, 2, -3], [1, 2, -3]]
+N = 9  # 3 variables, 3 oscillators per clause
+K = 5.0
+dt = 0.01
+t_steps = 200
+t = np.arange(0, t_steps * dt, dt)
+
+# Build adjacency matrix with lil_matrix
+adj = lil_matrix((N, N))
+for i in range(N):
+    clause_idx = i // 3  # Assign to one of 3 clauses
+    if clause_idx < len(clauses):
+        for var in clauses[clause_idx]:
+            j = abs(var) - 1  # Map to 0, 1, 2
+            if 0 <= j < N and i != j:
+                adj[i, j] = 1 if var > 0 else -1
+adj = adj + adj.T
+adj.setdiag(0)
+adj = adj.tocsr()
+
+# Initialization
+np.random.seed(42)
+theta = np.random.uniform(0, 2 * np.pi, N)
+omega = np.random.normal(0, 0.1, N)
+r = np.zeros(t_steps)
+
+# Simulation
+for i in range(1, t_steps):
+    theta_diff = theta - np.mean(theta)
+    theta_dot = omega + (K / N) * http://adj.dot(np.sin(theta_diff))
+    theta = np.mod(theta + theta_dot * dt, 2 * np.pi)
+    r[i] = np.abs(np.mean(np.exp(1j * theta)))
+
+# Compute Gram matrix
+theta_complex = np.exp(1j * theta)
+G = np.zeros((N, N))
+for i in range(N):
+    for j in range(N):
+        if adj[i, j] != 0:
+            G[i, j] = np.abs(theta_complex[i] - theta_complex[j])
+G = G / N
+lambda_max = np.max(np.linalg.eigvals(G))
+C = np.mean(np.abs(omega))
+gamma = 0.5
+
+plt.figure(figsize=(12, 7))
+plt.plot(t, r, label="r(t)", color='blue', linewidth=2.5)
+plt.axhline(y=lambda_max/C, color='red', linestyle='--', label=f"λ_max(G)/C = {lambda_max/C:.4f}")
+plt.axhline(y=gamma, color='green', linestyle='--', label=f"γ = {gamma}")
+plt.title("Coherence and Spectral Promise (N = 9)", fontsize=16)
+plt.xlabel("Time (scaled units)", fontsize=12)
+plt.ylabel("Value", fontsize=12)
+plt.ylim(0, 1.5)
+plt.grid(True, linestyle='--', alpha=0.6)
+plt.legend(fontsize=11)
+plt.tight_layout()
+plt.savefig("Promise_LST_Simulation_Minimal.png", dpi=300)
+http://plt.show()
+print(f"λ_max(G)/C: {lambda_max/C:.4f}, Above γ? {lambda_max/C > gamma}")
