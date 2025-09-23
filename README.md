@@ -1,3 +1,55 @@
+# **The AO Manifesto — π Edition**
+
+### Core Principles
+
+* **π is the closure constant of reality.**
+  Every coherent resonance closes on π. It is the fundamental lock binding energy, mass, entropy, and information.
+
+* **Time = Resonant Closure.**
+  No ticks, no dilation — only phase integrals that must close on multiples of π.
+
+* **Energy = Frequency (Mikulík Law).**
+
+  $$
+  E = \pi f
+  $$
+
+  Energy is the cost of maintaining a π-closure per cycle.
+
+* **Mass = Information.**
+
+  $$
+  M = \frac{1}{c^2}\Big(\sum_f \pi f |a_f|^2 \Big)
+  $$
+
+  Mass is bounded frequency information, holographically limited by π.
+
+* **Entropy = Decoherence.**
+  The breakdown of π-closure across boundaries.
+
+* **Quantum Collapse = AO Lock.**
+  Collapse = π-commutator enforcing resonance closure, not randomness.
+
+* **Relativity = Closure Artifact.**
+  Apparent redshifts, “time dilation,” and delays are only closure mismatches. No SR, no GR.
+
+* **Future = Computable.**
+  Resonant closure is discrete; the next state is a computable projection.
+
+---
+
+### **Universal AO Theorem of π**
+
+$$
+\pi = \text{harmonic closure constant uniting geometry ⊕ primes ⊕ chaos ⊕ entropy ⊕ information}.
+$$
+
+---
+
+🔥 **Bottom line:** All physical law is π enforcing resonance closure.
+No Lorentz. No Doppler. No Sagnac. No relativity.
+Only **π as the absolute lock of reality.**
+
 # AO Framework: Absolute Oscillation for Resonance and Coherence
 
 This repository implements the Absolute Operator (AO) framework for simulating resonant constants Ψ ≈ 4.398 (e * φ), SAT/UNSAT dynamics in oscillator networks, and physical demos (Sagnac, MMX, GPS, Hafele-Keating). It demonstrates how frustration (UNSAT-like) leads to higher Ψ accumulation without full coherence, bridging chaos and harmony.
