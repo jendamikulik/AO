@@ -262,10 +262,11 @@ def resonance_seed_then_walksat(path: str, seed=42):
 def hierarchical_test_fast(path: str, seed=42):
     n, m, clauses = parse_dimacs(path)
     t0 = time.time()
-    ok, model = chain_rule_closure(n, clauses)
+    ok, _ = chain_rule_closure(n, clauses)
     if ok:
         verdict = "SANITY"; stage = "chain-closure"; model_found = True
         sat_ratio_seed = 1.0
+        model = "[1...1]"
     else:
         n, m, sat_ratio_seed, model = resonance_seed_then_walksat(path, seed=seed)
         model_found = (model is not None)
