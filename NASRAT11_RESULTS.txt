@@ -1,5 +1,5 @@
 C:\Users\Jencek\AppData\Local\Microsoft\WindowsApps\python3.13.exe D:\HIT\NASRAT11.py 
-{'file': 'sample.cnf', 'verdict': 'SANITY', 'stage': 'chain-closure', 'sat_ratio_seed': 1.0, 'model_found': True, 'n_vars': 12, 'n_clauses': 22, 'elapsed_sec': 2.7179718017578125e-05, 'final_model': ([0, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1, -1, 1], [1, -1, -1, 1, 1, -1, -1, 1, 1, -1, -1, 1, 1, -1, -1, 1, 1, -1, -1, 1, 1, -1])}
+{'file': 'sample.cnf', 'verdict': 'SANITY', 'stage': 'chain-closure', 'sat_ratio_seed': 1.0, 'model_found': True, 'n_vars': 12, 'n_clauses': 22, 'elapsed_sec': 2.7179718017578125e-05, 'final_model': [1...1]}
 {'file': 'uf250-098.cnf', 'verdict': 'SANITY', 'stage': 'walksat', 'sat_ratio_seed': 0.923005, 'model_found': True, 'n_vars': 250, 'n_clauses': 1065, 'elapsed_sec': 1.1845924854278564, 'final_model': array([-1,  1, -1, -1, -1, -1, -1,  1, -1,  1,  1, -1,  1, -1,  1,  1, -1,
         1,  1, -1,  1,  1, -1,  1,  1,  1, -1, -1,  1,  1, -1, -1,  1,  1,
         1,  1,  1,  1, -1,  1, -1,  1, -1, -1,  1, -1,  1, -1, -1,  1,  1,
@@ -50,3 +50,4 @@ C:\Users\Jencek\AppData\Local\Microsoft\WindowsApps\python3.13.exe D:\HIT\NASRAT
 {'file': 'uuf250-0100.cnf', 'verdict': 'INSANITY', 'stage': 'fail', 'sat_ratio_seed': 0.909859, 'model_found': False, 'n_vars': 250, 'n_clauses': 1065, 'elapsed_sec': 2.614089012145996, 'final_model': None}
 
 Process finished with exit code 0
+
