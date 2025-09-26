@@ -262,7 +262,7 @@ def resonance_seed_then_walksat(path: str, seed=42):
 def hierarchical_test_fast(path: str, seed=42):
     n, m, clauses = parse_dimacs(path)
     t0 = time.time()
-    ok, final_model = chain_rule_closure(n, clauses)
+    ok, model = chain_rule_closure(n, clauses)
     if ok:
         verdict = "SANITY"; stage = "chain-closure"; model_found = True
         sat_ratio_seed = 1.0
@@ -273,7 +273,7 @@ def hierarchical_test_fast(path: str, seed=42):
         stage = "walksat" if model_found else "fail"
     dt = time.time() - t0
     return dict(file=path, verdict=verdict, stage=stage, sat_ratio_seed=round(sat_ratio_seed,6),
-                model_found=bool(model_found), n_vars=n, n_clauses=m, elapsed_sec=dt, final_model=final_model)
+                model_found=bool(model_found), n_vars=n, n_clauses=m, elapsed_sec=dt, final_model=model)
 
 # Run both now with the faster WalkSAT
 paths = ["sample.cnf", "uf250-098.cnf", "uf250-099.cnf", "uf250-0100.cnf", "uuf250-098.cnf", "uuf250-099.cnf", "uuf250-0100.cnf"]
@@ -283,7 +283,7 @@ for p in paths:
 
 # Save reports
 for r in reports:
-    with open(f"/mnt/data/{os.path.basename(r['file'])}.hier_fast_report.json", "w") as f:
-        json.dump(r, f, indent=2)
+    #with open(f"/mnt/data/{os.path.basename(r['file'])}.hier_fast_report.json", "w") as f:
+    #    json.dump(r, f, indent=2)
 
     print(r)
