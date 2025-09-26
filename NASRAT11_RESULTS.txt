@@ -1,6 +1,7 @@
 C:\Users\Jencek\AppData\Local\Microsoft\WindowsApps\python3.13.exe D:\HIT\NASRAT11.py 
-{'file': 'sample.cnf', 'verdict': 'SANITY', 'stage': 'chain-closure', 'sat_ratio_seed': 1.0, 'model_found': True, 'n_vars': 12, 'n_clauses': 22, 'elapsed_sec': 2.7179718017578125e-05, 'final_model': [1...1]}
-{'file': 'uf250-098.cnf', 'verdict': 'SANITY', 'stage': 'walksat', 'sat_ratio_seed': 0.923005, 'model_found': True, 'n_vars': 250, 'n_clauses': 1065, 'elapsed_sec': 1.1845924854278564, 'final_model': array([-1,  1, -1, -1, -1, -1, -1,  1, -1,  1,  1, -1,  1, -1,  1,  1, -1,
+{'file': 'sample.cnf', 'verdict': 'SANITY', 'stage': 'walksat', 'sat_ratio_seed': 0.590909, 'model_found': True, 'n_vars': 12, 'n_clauses': 22, 'elapsed_sec': 0.013993501663208008, 'final_model': array([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])}
+{'file': 'sample2.cnf', 'verdict': 'INSANITY', 'stage': 'fail', 'sat_ratio_seed': 0.454545, 'model_found': False, 'n_vars': 12, 'n_clauses': 22, 'elapsed_sec': 1.0969431400299072, 'final_model': None}
+{'file': 'uf250-098.cnf', 'verdict': 'SANITY', 'stage': 'walksat', 'sat_ratio_seed': 0.923005, 'model_found': True, 'n_vars': 250, 'n_clauses': 1065, 'elapsed_sec': 1.1505722999572754, 'final_model': array([-1,  1, -1, -1, -1, -1, -1,  1, -1,  1,  1, -1,  1, -1,  1,  1, -1,
         1,  1, -1,  1,  1, -1,  1,  1,  1, -1, -1,  1,  1, -1, -1,  1,  1,
         1,  1,  1,  1, -1,  1, -1,  1, -1, -1,  1, -1,  1, -1, -1,  1,  1,
        -1, -1,  1,  1,  1, -1,  1,  1, -1, -1, -1,  1,  1,  1,  1,  1,  1,
@@ -15,7 +16,7 @@ C:\Users\Jencek\AppData\Local\Microsoft\WindowsApps\python3.13.exe D:\HIT\NASRAT
        -1, -1, -1, -1,  1, -1, -1,  1,  1, -1, -1, -1, -1,  1, -1,  1, -1,
         1, -1,  1, -1,  1,  1, -1, -1, -1, -1, -1, -1,  1,  1, -1, -1, -1,
        -1,  1,  1, -1, -1,  1, -1, -1, -1, -1,  1, -1])}
-{'file': 'uf250-099.cnf', 'verdict': 'SANITY', 'stage': 'walksat', 'sat_ratio_seed': 0.898592, 'model_found': True, 'n_vars': 250, 'n_clauses': 1065, 'elapsed_sec': 0.7933070659637451, 'final_model': array([-1,  1,  1, -1,  1, -1,  1, -1,  1,  1, -1,  1, -1, -1, -1,  1,  1,
+{'file': 'uf250-099.cnf', 'verdict': 'SANITY', 'stage': 'walksat', 'sat_ratio_seed': 0.898592, 'model_found': True, 'n_vars': 250, 'n_clauses': 1065, 'elapsed_sec': 0.800182580947876, 'final_model': array([-1,  1,  1, -1,  1, -1,  1, -1,  1,  1, -1,  1, -1, -1, -1,  1,  1,
        -1,  1,  1,  1,  1, -1,  1, -1, -1,  1,  1,  1, -1, -1,  1, -1,  1,
        -1, -1,  1,  1, -1,  1, -1,  1, -1, -1,  1,  1,  1,  1,  1, -1, -1,
         1,  1, -1,  1, -1,  1,  1, -1, -1, -1,  1, -1,  1, -1, -1, -1,  1,
@@ -30,7 +31,7 @@ C:\Users\Jencek\AppData\Local\Microsoft\WindowsApps\python3.13.exe D:\HIT\NASRAT
        -1,  1, -1, -1,  1, -1, -1, -1,  1,  1, -1,  1, -1, -1,  1,  1,  1,
         1,  1, -1, -1, -1,  1, -1, -1,  1, -1, -1, -1,  1,  1, -1,  1, -1,
        -1,  1,  1,  1, -1, -1,  1,  1, -1, -1,  1, -1])}
-{'file': 'uf250-0100.cnf', 'verdict': 'SANITY', 'stage': 'walksat', 'sat_ratio_seed': 0.909859, 'model_found': True, 'n_vars': 250, 'n_clauses': 1065, 'elapsed_sec': 1.5737090110778809, 'final_model': array([ 1,  1, -1, -1, -1, -1,  1,  1,  1,  1,  1, -1,  1,  1,  1, -1, -1,
+{'file': 'uf250-0100.cnf', 'verdict': 'SANITY', 'stage': 'walksat', 'sat_ratio_seed': 0.909859, 'model_found': True, 'n_vars': 250, 'n_clauses': 1065, 'elapsed_sec': 1.499992847442627, 'final_model': array([ 1,  1, -1, -1, -1, -1,  1,  1,  1,  1,  1, -1,  1,  1,  1, -1, -1,
         1,  1,  1, -1, -1,  1, -1, -1, -1, -1,  1,  1, -1, -1,  1, -1,  1,
        -1, -1, -1, -1,  1, -1,  1,  1, -1, -1,  1, -1, -1, -1,  1,  1, -1,
        -1,  1, -1, -1, -1, -1,  1, -1,  1,  1,  1,  1,  1, -1,  1,  1, -1,
@@ -45,9 +46,9 @@ C:\Users\Jencek\AppData\Local\Microsoft\WindowsApps\python3.13.exe D:\HIT\NASRAT
         1, -1,  1,  1, -1,  1, -1, -1,  1,  1, -1,  1, -1, -1,  1, -1, -1,
        -1,  1,  1, -1,  1,  1, -1, -1, -1, -1,  1, -1,  1, -1, -1, -1, -1,
         1, -1,  1,  1, -1, -1, -1, -1,  1, -1,  1, -1])}
-{'file': 'uuf250-098.cnf', 'verdict': 'INSANITY', 'stage': 'fail', 'sat_ratio_seed': 0.903286, 'model_found': False, 'n_vars': 250, 'n_clauses': 1065, 'elapsed_sec': 2.658259153366089, 'final_model': None}
-{'file': 'uuf250-099.cnf', 'verdict': 'INSANITY', 'stage': 'fail', 'sat_ratio_seed': 0.895775, 'model_found': False, 'n_vars': 250, 'n_clauses': 1065, 'elapsed_sec': 2.622982978820801, 'final_model': None}
-{'file': 'uuf250-0100.cnf', 'verdict': 'INSANITY', 'stage': 'fail', 'sat_ratio_seed': 0.909859, 'model_found': False, 'n_vars': 250, 'n_clauses': 1065, 'elapsed_sec': 2.614089012145996, 'final_model': None}
+{'file': 'uuf250-098.cnf', 'verdict': 'INSANITY', 'stage': 'fail', 'sat_ratio_seed': 0.903286, 'model_found': False, 'n_vars': 250, 'n_clauses': 1065, 'elapsed_sec': 2.644958734512329, 'final_model': None}
+{'file': 'uuf250-099.cnf', 'verdict': 'INSANITY', 'stage': 'fail', 'sat_ratio_seed': 0.895775, 'model_found': False, 'n_vars': 250, 'n_clauses': 1065, 'elapsed_sec': 2.6180593967437744, 'final_model': None}
+{'file': 'uuf250-0100.cnf', 'verdict': 'INSANITY', 'stage': 'fail', 'sat_ratio_seed': 0.909859, 'model_found': False, 'n_vars': 250, 'n_clauses': 1065, 'elapsed_sec': 2.6190311908721924, 'final_model': None}
+{'file': 'uuf250-01.cnf', 'verdict': 'INSANITY', 'stage': 'fail', 'sat_ratio_seed': 0.899531, 'model_found': False, 'n_vars': 250, 'n_clauses': 1065, 'elapsed_sec': 2.6127161979675293, 'final_model': None}
 
 Process finished with exit code 0
-

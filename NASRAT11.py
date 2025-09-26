@@ -19,7 +19,7 @@ def parse_dimacs(path: str) -> Tuple[int, int, List[Tuple[int, ...]]]:
             if xs and xs[-1] == 0: xs.pop()
             if xs: clauses.append(tuple(xs))
     return n, len(clauses), clauses
-
+"""
 def chain_rule_closure(n_vars: int, clauses: List[Tuple[int, ...]]):
     from collections import deque
     a = [0] * (n_vars + 1)
@@ -55,6 +55,105 @@ def chain_rule_closure(n_vars: int, clauses: List[Tuple[int, ...]]):
                     elif b[j] != need_b:
                         return False, (a, b)
     return True, (a, b)
+"""
+
+from typing import List, Tuple
+
+def chain_rule_closure(n_vars: int, clauses: List[Tuple[int, ...]]):
+    """
+    CORE-consistent check:
+      • First enforce orientation constraints (parity) via BFS on the bipartite graph (variables ↔ clauses).
+      • If any parity conflict appears, UNSAT immediately.
+      • Otherwise, induce a boolean assignment from variable orientations and
+        check that every clause contains at least one satisfied literal.
+
+    Returns:
+        (is_sat, (a, b, truth))
+        where a[v] ∈ {−1,0,+1} are variable orientations,
+              b[j] ∈ {−1,0,+1} are clause orientations,
+              truth[v] ∈ {False, True} is the induced boolean value.
+    """
+    from collections import deque
+
+    # 0-index arrays with a dummy slot for variables (1..n)
+    a = [0] * (n_vars + 1)                # variable orientations
+    C = len(clauses)
+    b = [0] * C                           # clause orientations
+
+    # adjacency
+    adj_v_to_c = [[] for _ in range(n_vars + 1)]
+    adj_c_to_v = [[] for _ in range(C)]
+    for j, cl in enumerate(clauses):
+        for lit in cl:
+            v = abs(lit)
+            s = +1 if lit > 0 else -1
+            adj_c_to_v[j].append((v, s))
+            adj_v_to_c[v].append((j, s))
+
+    # --- 1) Parity propagation (your BFS, unchanged in spirit) ---
+    for start_clause in range(C):
+        if b[start_clause] != 0:
+            continue
+        b[start_clause] = +1
+        dq = deque([("c", start_clause)])
+
+        while dq:
+            typ, idx = dq.popleft()
+            if typ == "c":
+                j = idx
+                bj = b[j]
+                for v, s in adj_c_to_v[j]:
+                    need_a = s * bj
+                    if a[v] == 0:
+                        a[v] = need_a
+                        dq.append(("v", v))
+                    elif a[v] != need_a:
+                        # Parity (orientation) contradiction → UNSAT
+                        return False, (a, b, None)
+            else:  # typ == "v"
+                v = idx
+                av = a[v]
+                for j, s in adj_v_to_c[v]:
+                    need_b = s * av
+                    if b[j] == 0:
+                        b[j] = need_b
+                        dq.append(("c", j))
+                    elif b[j] != need_b:
+                        # Parity (orientation) contradiction → UNSAT
+                        return False, (a, b, None)
+
+    # --- 2) Induce a boolean valuation from orientations ---
+    # Orientation only fixes a sign; a global flip does not matter.
+    # Choose the simplest gauge: True ↔ a[v] = +1 (and False ↔ a[v] = −1).
+    # For any isolated variable (a[v] == 0), default to False; it will be
+    # tested by clauses below (and if needed, orientation would have set it).
+    truth = [False] * (n_vars + 1)
+    for v in range(1, n_vars + 1):
+        if a[v] >= 0:
+            truth[v] = True
+        else:
+            truth[v] = False
+
+    # --- 3) Clause satisfaction test (the missing piece) ---
+    for cl in clauses:
+        ok = False
+        for lit in cl:
+            v = abs(lit)
+            if lit > 0:
+                ok |= truth[v]
+            else:
+                ok |= (not truth[v])
+            if ok:
+                break
+        if not ok:
+            # All literals false under induced assignment → UNSAT
+            return False, (a, b, truth)
+
+    # All clauses satisfied under induced valuation
+    return True, (a, b, truth)
+
+
+
 
 # Resonance seed (literal-aware, minimal)
 import math
@@ -262,11 +361,11 @@ def resonance_seed_then_walksat(path: str, seed=42):
 def hierarchical_test_fast(path: str, seed=42):
     n, m, clauses = parse_dimacs(path)
     t0 = time.time()
-    ok, _ = chain_rule_closure(n, clauses)
+    ok, model = chain_rule_closure(n, clauses)
     if ok:
         verdict = "SANITY"; stage = "chain-closure"; model_found = True
         sat_ratio_seed = 1.0
-        model = "[1...1]"
+        #model = "[1...1]"
     else:
         n, m, sat_ratio_seed, model = resonance_seed_then_walksat(path, seed=seed)
         model_found = (model is not None)
@@ -277,14 +376,11 @@ def hierarchical_test_fast(path: str, seed=42):
                 model_found=bool(model_found), n_vars=n, n_clauses=m, elapsed_sec=dt, final_model=model)
 
 # Run both now with the faster WalkSAT
-paths = ["sample.cnf", "uf250-098.cnf", "uf250-099.cnf", "uf250-0100.cnf", "uuf250-098.cnf", "uuf250-099.cnf", "uuf250-0100.cnf"]
+paths = ["sample.cnf", "sample2.cnf", "uf250-098.cnf", "uf250-099.cnf", "uf250-0100.cnf", "uuf250-098.cnf", "uuf250-099.cnf", "uuf250-0100.cnf", "uuf250-01.cnf"]
 reports = []
 for p in paths:
     reports.append(hierarchical_test_fast(p, seed=42))
 
 # Save reports
 for r in reports:
-    #with open(f"/mnt/data/{os.path.basename(r['file'])}.hier_fast_report.json", "w") as f:
-    #    json.dump(r, f, indent=2)
-
     print(r)
