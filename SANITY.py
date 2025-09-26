@@ -104,25 +104,34 @@ def stride_near(T: int, frac: float, forbid=(1, 2), search_radius=None):
     return best_s
 
 
-# Simulation
-#clauses = [
-#    [1, 2, 3],  # x or y or z
-#    [-1, -2, 3],  # ~x or ~y or z
-#    [-1, 2, -3],  # ~x or y or ~z
-#    [1, -2, -3]  # x or ~y or ~z
-#]  # Classic UNSAT example
-
-#n = 3  # variables
-
 clauses = [
-    [1, 2, 3, 4], [1, 2, 3, -4], [1, 2, -3, 4], [1, 2, -3, -4],
-    [1, -2, 3, 4], [1, -2, 3, -4], [1, -2, -3, 4], [1, -2, -3, -4],
-    [-1, 2, 3, 4], [-1, 2, 3, -4], [-1, 2, -3, 4], [-1, 2, -3, -4],
-    [-1, -2, 3, 4], [-1, -2, 3, -4], [-1, -2, -3, 4], [-1, -2, -3, -4]
+    [1,2,3], [-1,4,5], [2,-4,6], [-3,5,-6],
+    [7,8,9], [-7,-8,10], [8,9,-10], [-9,7,11],
+    [12,13,14], [-12,-13,15], [13,14,-15], [-14,12,16],
+    [17,18,19], [-17,-18,20], [18,19,-20], [-19,17,21],
+    [22,23,24], [-22,25,26], [23,-25,27], [-24,26,-27],
+    [28,29,30], [-28,-29,31], [29,30,-31], [-30,28,32],
+    [33,34,35], [-33,-34,36], [34,35,-36], [-35,33,37],
+    [38,39,40], [-38,-39,41], [39,40,-41], [-40,38,42],
+    [43,44,45], [-43,-44,46], [44,45,-46], [-45,43,47],
+    [48,49,50], [-48,-49,51], [49,50,-51], [-50,48,52],
+    [53,54,55], [-53,-54,56], [54,55,-56], [-55,53,57],
+    [58,59,60], [-58,-59,1], [59,60,-1], [-60,58,2],
+    [-1,-2,-3], [1,-4,-5], [-2,4,-6], [3,-5,6],
+    [4,10,15], [-4,-10,-15], [5,11,16], [-5,-11,-16],
+    [6,12,17], [-6,-12,-17], [20,21,22], [-20,-21,-22],
+    [25,26,27], [-25,-26,-27], [28,31,32], [-28,-31,-32],
+    [33,36,37], [-33,-36,-37], [38,41,42], [-38,-41,-42],
+    [43,46,47], [-43,-46,-47], [48,51,52], [-48,-51,-52],
+    [53,56,57], [-53,-56,-57], [58,1,2], [-58,-1,-2]
 ]
-n = 4
+n = 60
 
-T = 1000  # steps for annealing
+
+#n = 2  # Počet spinů (Hyperkrychle)
+#clauses = [(1),(-1)]  # UNSAT klauzule (Entropická daň)
+
+T = 10000 # steps for annealing
 frac = (math.sqrt(5) - 1) / 2  # golden ratio conjugate for irrational flavor
 stride = stride_near(T, frac)
 print(f"Anti-aliasing stride: {stride}")
@@ -174,6 +183,8 @@ for t in range(T):
 print(f"\nFinal energy: {current_energy}")
 if current_energy == 0:
     print("Full resonance: SAT instance!")
+    final_model_list = spins.tolist()
+    print(f"Final model list: {final_model_list}")
 else:
     print("Resonance decay barrier hit: UNSAT confirmed. AO pure—no SR fluff needed.")
 
@@ -182,3 +193,4 @@ phases = np.arccos(spins)  # Map spins to phases for resonance viz
 mean_vec = np.mean(np.exp(1j * phases))
 kappa_proxy = abs(mean_vec)  # 1 = perfect alignment, 0 = chaos
 print(f"Final coherence (kappa proxy): {kappa_proxy:.4f}")
+
