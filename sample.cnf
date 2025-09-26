@@ -1,0 +1,39 @@
+c AO MANIFEST REZONANCE: N=12 GLOBAL COHERENCE TEST
+c Tato instance vynucuje, aby vsech 12 promennych bylo stejnych (x1=...=x12).
+c Testuje se schopnost AO systemu najit globalni Jednotu.
+c
+p cnf 12 22
+c
+c Vynucuje: x1 = x2
+-1 2 0
+1 -2 0
+c Vynucuje: x2 = x3
+-2 3 0
+2 -3 0
+c Vynucuje: x3 = x4
+-3 4 0
+3 -4 0
+c Vynucuje: x4 = x5
+-4 5 0
+4 -5 0
+c Vynucuje: x5 = x6
+-5 6 0
+5 -6 0
+c Vynucuje: x6 = x7
+-6 7 0
+6 -7 0
+c Vynucuje: x7 = x8
+-7 8 0
+7 -8 0
+c Vynucuje: x8 = x9
+-8 9 0
+8 -9 0
+c Vynucuje: x9 = x10
+-9 10 0
+9 -10 0
+c Vynucuje: x10 = x11
+-10 11 0
+10 -11 0
+c Vynucuje: x11 = x12
+-11 12 0
+11 -12 0
